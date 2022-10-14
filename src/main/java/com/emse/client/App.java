@@ -5,10 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.*;
 
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.sns.SnsClient;
@@ -29,13 +26,43 @@ public class App {
 
         public static void main(String[] args)
     {
-        String bucket = "databucket8906";
-        String file =  "01-10-2022-store9.csv";
+        String bucket = "databucket89062";
+
         S3Client s3Client = S3Client.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
         SnsClient snsClient = SnsClient.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
-        uploadAFileToABucket(bucket,s3Client,"C:/Users/quent/Documents/Ecole/2022- 2A/Majeur info/Cloud computing/Project/sales-data/",file);
-        publishNotif(List.of("arn:aws:sns:us-east-1:818564790073:StoreSalesTopic",bucket,file),snsClient);
+        createBucket(bucket,s3Client); //on le crée si il existe pas
+
+        for (Integer i=1;i<11;i++){ //permet d'upload tout les fichiers d'un jour d'un coup
+            String file = "02-10-2022-store"+i.toString()+".csv";
+            uploadAFileToABucket(bucket, s3Client, "C:/Users/quent/Documents/Ecole/2022- 2A/Majeur info/Cloud computing/Project/sales-data/", file);
+            publishNotif(List.of("arn:aws:sns:us-east-1:818564790073:StoreSalesTopic", bucket, file), snsClient);
+        }
+
     }
+
+    public static List<Bucket> listBuckets(S3Client s3){
+        ListBucketsRequest listBucketsRequest = ListBucketsRequest.builder().build();
+        ListBucketsResponse listBucketResponse = s3.listBuckets(listBucketsRequest);
+        return listBucketResponse.buckets();
+    }
+
+    public static boolean testsiexiste(String nomBucket,S3Client s3){
+        boolean test=false;
+        for (Bucket sceau : listBuckets(s3) ) {
+            if(sceau.name().equals(nomBucket)){
+                test=true;
+            }
+        }
+        return test;
+    }
+
+    public static void createBucket(String nomBucket,S3Client s3){
+        if (!testsiexiste(nomBucket,s3)) {
+            CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(nomBucket).build();
+            CreateBucketResponse createBucketResponse = s3.createBucket(createBucketRequest);
+        }
+    }
+
 
     public static void uploadAFileToABucket(String nomBucket,S3Client s3,String path,String name){
         PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(nomBucket).key(name).build();
