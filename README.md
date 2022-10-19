@@ -20,3 +20,4 @@
 2. Go to the main function
 3. Verify that the name of the bucket is the same that the one in Client (it is the case by default)
 4. Choose the date of the files to be processed
+5. Run the main function
