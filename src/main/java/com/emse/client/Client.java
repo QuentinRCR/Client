@@ -19,7 +19,7 @@ import java.util.List;
  *
  * @see <a href=https://docs.aws.amazon.com/lambda/latest/dg/java-handler.html>Lambda Java Handler</a> for more information
  */
-public class App {
+public class Client {
 
         public static void main(String[] args)
     {
