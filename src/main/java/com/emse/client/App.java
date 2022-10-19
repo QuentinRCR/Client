@@ -1,13 +1,10 @@
 package com.emse.client;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 import software.amazon.awssdk.services.sns.model.PublishResponse;
@@ -26,15 +23,17 @@ public class App {
 
         public static void main(String[] args)
     {
+        String SampleFileForderPath="C:/Users/quent/Documents/Ecole/2022- 2A/Majeur info/Cloud computing/Project/sales-data/";
+        String dateToUpload = "02-10-2022";
         String bucket = "databucket89062";
 
         S3Client s3Client = S3Client.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
         SnsClient snsClient = SnsClient.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
-        createBucket(bucket,s3Client); //on le crée si il existe pas
+        createBucket(bucket,s3Client); //create bucket if it doesn't exist
 
-        for (Integer i=1;i<11;i++){ //permet d'upload tout les fichiers d'un jour d'un coup
-            String file = "02-10-2022-store"+i.toString()+".csv";
-            uploadAFileToABucket(bucket, s3Client, "C:/Users/quent/Documents/Ecole/2022- 2A/Majeur info/Cloud computing/Project/sales-data/", file);
+        for (int i=1;i<11;i++){ //to upload all the files of a day at once
+            String file = dateToUpload+"-store"+i+".csv";
+            uploadAFileToABucket(bucket, s3Client, SampleFileForderPath, file);
             publishNotif(List.of("arn:aws:sns:us-east-1:818564790073:StoreSalesTopic", bucket, file), snsClient);
         }
 
@@ -46,26 +45,26 @@ public class App {
         return listBucketResponse.buckets();
     }
 
-    public static boolean testsiexiste(String nomBucket,S3Client s3){
+    public static boolean testIfBucketExists(String nameBucket, S3Client s3){
         boolean test=false;
-        for (Bucket sceau : listBuckets(s3) ) {
-            if(sceau.name().equals(nomBucket)){
+        for (Bucket bucket : listBuckets(s3) ) {
+            if(bucket.name().equals(nameBucket)){
                 test=true;
             }
         }
         return test;
     }
 
-    public static void createBucket(String nomBucket,S3Client s3){
-        if (!testsiexiste(nomBucket,s3)) {
-            CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(nomBucket).build();
+    public static void createBucket(String nameBucket,S3Client s3){
+        if (!testIfBucketExists(nameBucket,s3)) {
+            CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(nameBucket).build();
             CreateBucketResponse createBucketResponse = s3.createBucket(createBucketRequest);
         }
     }
 
 
-    public static void uploadAFileToABucket(String nomBucket,S3Client s3,String path,String name){
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(nomBucket).key(name).build();
+    public static void uploadAFileToABucket(String nameBucket,S3Client s3,String path,String name){
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(nameBucket).key(name).build();
         PutObjectResponse putObjectResponse = s3.putObject(putObjectRequest, RequestBody.fromFile(new File(path+name)));
     }
 
