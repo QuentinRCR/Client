@@ -12,88 +12,58 @@ import software.amazon.awssdk.services.sns.model.SnsException;
 
 import java.io.File;
 import java.util.List;
+import java.util.stream.Collectors;
 
-/**
- * Lambda function entry point. You can change to use other pojo type or implement
- * a different RequestHandler.
- *
- * @see <a href=https://docs.aws.amazon.com/lambda/latest/dg/java-handler.html>Lambda Java Handler</a> for more information
- */
 public class Client {
-
-        public static void main(String[] args)
-    {
-        String SampleFileForderPath="C:/Users/quent/Documents/Ecole/2022- 2A/Majeur info/Cloud computing/Project/sales-data/";
-        String dateToUpload = "02-10-2022";
-        String bucket = "databucket89062";
+    public static void main(String[] args) {
+        //Enter the absolute path of the file you wish to upload e.g. "/home/user/sales/01-10-2022-store1.csv"
+        String csvFilePath= "";
+        //Enter the bucket name you wish to upload the csv files to
+        String bucketName = "";
+        //Enter the topic ARN of the SNS you have configured
+        String snsArn = "";
 
         S3Client s3Client = S3Client.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
         SnsClient snsClient = SnsClient.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
-        createBucket(bucket,s3Client); //create bucket if it doesn't exist
+        createBucket(s3Client, bucketName); //if the bucket does not exist, create a new one
 
-        for (int i=1;i<11;i++){ //to upload all the files of a day at once
-            String file = dateToUpload+"-store"+i+".csv";
-            uploadAFileToABucket(bucket, s3Client, SampleFileForderPath, file);
-            publishNotif(List.of("arn:aws:sns:us-east-1:818564790073:StoreSalesTopic", bucket, file), snsClient);
-        }
+        String[] s = csvFilePath.split("/");
+        String fileName = s[s.length -1];
 
+        uploadFileToBucket(s3Client, bucketName, csvFilePath, fileName);
+        publishSnsNotification(snsClient, snsArn, bucketName, fileName);
     }
 
-    public static List<Bucket> listBuckets(S3Client s3){
+    public static List<Bucket> listBuckets(S3Client s3Client) {
         ListBucketsRequest listBucketsRequest = ListBucketsRequest.builder().build();
-        ListBucketsResponse listBucketResponse = s3.listBuckets(listBucketsRequest);
+        ListBucketsResponse listBucketResponse = s3Client.listBuckets(listBucketsRequest);
         return listBucketResponse.buckets();
     }
 
-    public static boolean testIfBucketExists(String nameBucket, S3Client s3){
-        boolean test=false;
-        for (Bucket bucket : listBuckets(s3) ) {
-            if(bucket.name().equals(nameBucket)){
-                test=true;
-            }
-        }
-        return test;
+    public static boolean bucketExists(S3Client s3Client, String bucketName) {
+        return listBuckets(s3Client).stream().map(Bucket::name).collect(Collectors.toList()).contains(bucketName);
     }
 
-    public static void createBucket(String nameBucket,S3Client s3){
-        if (!testIfBucketExists(nameBucket,s3)) {
+    public static void createBucket(S3Client s3Client, String nameBucket){
+        if (!bucketExists(s3Client, nameBucket)) {
             CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(nameBucket).build();
-            CreateBucketResponse createBucketResponse = s3.createBucket(createBucketRequest);
+            s3Client.createBucket(createBucketRequest);
         }
     }
 
-
-    public static void uploadAFileToABucket(String nameBucket,S3Client s3,String path,String name){
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(nameBucket).key(name).build();
-        PutObjectResponse putObjectResponse = s3.putObject(putObjectRequest, RequestBody.fromFile(new File(path+name)));
+    public static void uploadFileToBucket(S3Client s3Client, String bucketName, String path, String fileName){
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(bucketName).key(fileName).build();
+        s3Client.putObject(putObjectRequest, RequestBody.fromFile(new File(path)));
     }
 
-    public static void publishNotif(List<String> args, SnsClient snsClient) {
-        //Region region = Region.US_EAST_1;
-
-        if (args.size() < 3) {
-            System.out.println("Missing the Topic ARN, Bucket Name, or File Name arguments");
-            System.exit(1);
-        }
-
-        String topicARN = args.get(0);
-        String bucketName = args.get(1);
-        String fileName = args.get(2);
-
+    public static void publishSnsNotification(SnsClient sns, String arn, String bucketName, String fileName) {
         try {
-
-            PublishRequest request = PublishRequest.builder().message(bucketName + ";" + fileName).topicArn(topicARN)
-                    .build();
-
-            PublishResponse snsResponse = snsClient.publish(request);
-            System.out.println(
-                    snsResponse.messageId() + " Message sent. Status is " + snsResponse.sdkHttpResponse().statusCode());
-
+            PublishRequest request = PublishRequest.builder().message(bucketName + ";" + fileName).topicArn(arn).build();
+            PublishResponse snsResponse = sns.publish(request);
+            System.out.println(snsResponse.messageId() + " Message sent. Status is " + snsResponse.sdkHttpResponse().statusCode());
         } catch (SnsException e) {
             System.err.println(e.awsErrorDetails().errorMessage());
             System.exit(1);
         }
     }
-
-
 }
