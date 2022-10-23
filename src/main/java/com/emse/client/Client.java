@@ -18,7 +18,7 @@ public class Client {
     public static void main(String[] args) {
         //Enter the absolute path of the file you wish to upload e.g. "/home/user/sales/01-10-2022-store1.csv"
         String csvFilePath= "";
-        //Enter the bucket name you wish to upload the csv files to
+        //Enter the bucket name you wish to upload the csv files to (if it does not already exist, it will be automatically crated
         String bucketName = "";
         //Enter the topic ARN of the SNS you have configured
         String snsArn = "";
