@@ -12,17 +12,20 @@
 6. The generated Worker.jar will have to be uploaded to two places:
    + Upload to the Lambda and set the function to SqsEventHandler::handleRequest
    + Upload to the EC2 with the command:
-     >scp -i {security key} {path to Worker.jar} {path of destination}
-   + An example command:
-     >scp -i "awskey.pem" Worker.jar ec2-user@ec2-52-90-7-118.compute-1.amazonaws.com:/home/ec2-user
+     >scp -i "security key" {path to Worker.jar} {destination path}
+     + An example command:
+       >scp -i "awskey.pem" ./Worker.jar ec2-user@ec0-0-0-0.compute-1.amazonaws.com:/home/ec2-user
 7. Configure the Lambda following the video
 8. The Java application can be launched with the command:
    >java -jar Worker.jar --interval 120
    
    If the interval option isn't specified, it defaults to 120 seconds
+   
+   By default, Java might not be installed on the EC2.
+   If that is the case, use yum to install it
 9. Remember that to test one of the implementations of the Worker,
-   you should disable the subscription of the other's SNS to SQS
-   in order to avoid having unprocessed messages stacking up in one of both queues
+   you should disable the subscription of the other's SQS
+   in order to avoid having conflicts between the two programs
 
 ## Step 1: Client
 1. Open the Client project and navigate to the Client class main function
@@ -36,6 +39,10 @@
 
 
 ## Step 2: Worker
+< ! > Careful, do not send an SQS message from the AWS web interface.
+The message structure of an SNS notification is json, thus the Worker is expecting to receive a json message.
+If you really want, you could send:
+> { "Message": "bucket;file" }
 
 ### Lambda
 1. Check the Cloudwatch logs to see if the Lambda was triggered correctly
